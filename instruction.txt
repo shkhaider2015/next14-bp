@@ -1,0 +1,13 @@
+============================================================
+=====================  DATABASE  ===========================
+============================================================
+// Add database in .env file
+    DATABASE_URL="postgresql://macbook:1234@localhost:5432/next14-bp?schema=public"
+
+// Initialize PRISMA 
+    npx init prisma
+
+// Create schema in database
+    npx prisma migrate dev
+
+
