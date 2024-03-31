@@ -48,3 +48,10 @@ export const _isJSON = (req: NextRequest) => {
     return SHA256(value).toString();
   };
   
+
+  export function exclude(data:any, ...keys:any) {
+    for (let key of keys) {
+      delete data[key]
+    }
+    return data
+  }

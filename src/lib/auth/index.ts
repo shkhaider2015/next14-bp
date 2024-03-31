@@ -31,6 +31,7 @@ export async function login(user:IUser) {
     const session = await encrypt({ user, expires });
 
     cookies().set(auth_session_name, session, { expires, httpOnly: true })
+    return session;
 }
 
 export async function logout() {
