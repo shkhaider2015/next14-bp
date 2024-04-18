@@ -1,6 +1,7 @@
+import { JWTErrorNames } from "@/constants/server";
 import { IAPIResponse, TContentTypes } from "@/types/common.types";
 import { SHA256 } from "crypto-js";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { serialize } from "object-to-formdata";
 
 
@@ -55,3 +56,18 @@ export const _isJSON = (req: NextRequest) => {
     }
     return data
   }
+
+export function errorResponse (error:any) {
+  let message:any;
+  if(error?.name === JWTErrorNames.JWSInvalid) message = 'Token is invalid'
+  else if(error?.name === JWTErrorNames.JWTExpired) message = 'Token is expired, Please login'
+  else {
+    message = error?.message || error
+  }
+
+  return NextResponse.json({
+    message,
+    data: null
+  })
+
+}
