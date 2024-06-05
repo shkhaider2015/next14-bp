@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error: any) {
-    console.log("Error : ", error)
+    console.log("Error : ", error);
     return errorResponse(error);
   }
 }

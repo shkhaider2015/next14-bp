@@ -17,7 +17,7 @@ export default async function Dashboard() {
           "use server";
           logout();
         }}
-        method="post"
+        
       >
         <button type="submit">Sign Out</button>
       </form>

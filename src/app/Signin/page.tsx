@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 export default async function Login() {
   const session = await getSession();
+  console.log("Session : ", session)
   if (session) {
     redirect("dashboard");
   }
@@ -16,9 +17,9 @@ export default async function Login() {
             "use server";
             const email = formData.get("email")?.toString();
             const password = formData.get("password")?.toString();
-            login({ email: email || "", password: password || "" });
+            await login({ email: email || "", password: password || "" });
           }}
-          method="post"
+          // method="post"
         >
           <input
             type="email"

@@ -1,7 +1,7 @@
-import { createTokens, login } from "@/lib/auth";
+import { createTokens } from "@/lib/auth";
 import { exclude, hashPassword, requestPostContent } from "@/lib/common";
 import prismaInstance from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import _ from "lodash";
 import { NextRequest, NextResponse } from "next/server";
 import validator from "validator";
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Retrieve user data without password field
     const updatedUser = exclude(user, ["password"]);
-
+    await prismaInstance.$disconnect()
     return NextResponse.json(
       {
         message: "User found successfully",
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       return NextResponse.json(
         {
           message: error.message,

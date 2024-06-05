@@ -10,7 +10,7 @@ export interface ILogin extends IUser {
 export interface IRegister extends IUser {
     fullName: string;
     confirmPassword: string;
-    role: TROLE;
+    role: Role;
 }
 
 export interface IProfile extends IUser {
@@ -18,10 +18,14 @@ export interface IProfile extends IUser {
     gender?: TGENDER;
     profile_image?: string;
     age?: number;
-    role: TROLE;
+    role: Role;
     createdAt?: string;
     updatedAt?: string;
 }
 
 export type TGENDER = "MALE" | "FEMALE" | "NOT_SPECIED";
-export type TROLE = "ADMIN" | "USER" | "PREMIUM"
+export enum Role {
+    USER = "USER",  
+    PREMIUM = "PREMUIM",
+    ADMIN = "ADMIN",  
+}

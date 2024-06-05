@@ -3,6 +3,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "process";
+import prismaInstance from "../prisma";
+import { hashPassword } from "../common";
 
 const secretKey = process.env.SECRET_KEY;
 const alogorith = "HS256";
@@ -26,12 +28,35 @@ export async function decrypt(input: string): Promise<any> {
   return payload;
 }
 
-export async function login(user: IAuthData) {
-  const expires = new Date(Date.now() + 10 * 100);
-  const session = await encrypt({ user, expires }, "ACCESS");
+export async function login(userData: {email:string; password:string}) {
 
-  cookies().set(auth_session_name, session, { expires, httpOnly: true });
-  return session;
+    const user = await prismaInstance.user.findFirst({
+      where: {
+        email: userData.email,
+        password: hashPassword(userData.password)
+      }
+    });
+
+    if(!user) return null;
+    const tokenData:IAuthData = {
+      email: user.email,
+      id: user.id
+    }
+
+    let print3 = await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve("")
+      }, 3000);
+    })
+    const expires = new Date(Date.now() + 60 * 100);
+    const session = await encrypt({ user: tokenData , expires }, "ACCESS");
+
+  
+    cookies().set(auth_session_name, session, { expires, httpOnly: true,})
+    
+    return session;
+
+
 }
 
 export async function logout() {
@@ -83,7 +108,25 @@ export async function updateAccessToken(data: IAuthData) {
   return accessToken
 }
 
+export async function getUserRole(userId:string | undefined)
+{
+  if(!userId) return null
+  try {
+    let user = await prismaInstance.user.findFirstOrThrow({
+      where: {
+        id: userId
+      }
+    })
+    
+    return user.role
+  } catch (error) {
+    console.error("User ", error)
+    return null
+  }
+}
+
 interface IAuthData {
   email: string;
   id: string;
+  password?: string;
 }

@@ -41,6 +41,6 @@ model Token {
 
 enum Role {
   USER
-  PREMUIM
+  PREMIUM
   ADMIN
 }

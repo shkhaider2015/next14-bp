@@ -20,6 +20,7 @@
     "lodash": "^4.17.21",
     "next": "14.1.4",
     "next-auth": "^4.24.7",
+    "nodemailer": "^6.9.13",
     "object-to-formdata": "^4.5.1",
     "prisma": "^5.11.0",
     "react": "^18",

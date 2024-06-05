@@ -2,10 +2,11 @@ import { hashPassword, requestPostContent } from "@/lib/common";
 import { NextRequest, NextResponse } from "next/server";
 import _ from "lodash";
 import validator from "validator";
-import { Prisma } from "@prisma/client";
 import prismaInstance from "@/lib/prisma";
 import { writeFile } from "fs/promises";
 import path from "path";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import { Role } from "@/types/user.types";
 
 export const config = {
   api: {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
       message: "User is found successfully",
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       return NextResponse.json(
         {
           message: error.message,
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
   let password: string = data.get("password")?.toString() || "";
   let confirmPassword: string = data.get("confirmPassword")?.toString() || "";
   let fullName: string = data.get("fullName")?.toString() || "";
+  let role: Role | undefined = data.get("role") as any as Role;
 
   if (!email) errors.push("Email is required");
   if (!password) errors.push("Password is required");
@@ -86,13 +88,17 @@ export async function POST(request: NextRequest) {
   if (!_.isEqual(password, confirmPassword))
     errors.push("Confirm password is not matched");
 
+  if(role != Role.ADMIN && role != Role.PREMIUM && role != Role.USER) {
+    errors.push("The given role is not allowed")
+  }
+
   if (!_.isEmpty(errors)) {
     return NextResponse.json({ data: null, message: errors });
   }
 
   try {
     const user = await prismaInstance.user.create({
-      data: { email, password: hashPassword(password), fullName },
+      data: { email, password: hashPassword(password), fullName, role },
     });
     return NextResponse.json(
       {
@@ -102,7 +108,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       if (error.code == "P2002") {
         return NextResponse.json(
           {
@@ -179,7 +185,7 @@ export async function PATCH(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       return NextResponse.json(
         {
           message: error.message,
