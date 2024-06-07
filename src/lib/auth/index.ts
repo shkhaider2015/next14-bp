@@ -1,18 +1,22 @@
-import { IUser } from "@/types/user.types";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
-import { env } from "process";
 import prismaInstance from "../prisma";
 import { hashPassword } from "../common";
 
+const accessTokenExpresDate = Date.now() + 60 * 6 * 100;
+const refrreshTokenExpresDate = Date.now() + 60 * 12 * 100;
 const secretKey = process.env.SECRET_KEY;
 const alogorith = "HS256";
 const key = new TextEncoder().encode(secretKey);
 export const auth_session_name = "auth_session_next14";
 
-export async function encrypt(payload: { user: IAuthData; expires: Date }, type:"ACCESS"|"REFRESH") {
-  const expirationTime = type === "ACCESS" ? "60 seconds from now" : "180 seconds from now"
+export async function encrypt(
+  payload: { user: IAuthData; expires: Date },
+  type: "ACCESS" | "REFRESH"
+) {
+  const expirationTime =
+    type === "ACCESS" ? "60 minutes from now" : "180 minutes from now";
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: alogorith })
     .setIssuedAt()
@@ -28,35 +32,31 @@ export async function decrypt(input: string): Promise<any> {
   return payload;
 }
 
-export async function login(userData: {email:string; password:string}) {
+export async function login(userData: { email: string; password: string }) {
+  const user = await prismaInstance.user.findFirst({
+    where: {
+      email: userData.email,
+      password: hashPassword(userData.password),
+    },
+  });
 
-    const user = await prismaInstance.user.findFirst({
-      where: {
-        email: userData.email,
-        password: hashPassword(userData.password)
-      }
-    });
+  if (!user) return null;
+  const tokenData: IAuthData = {
+    email: user.email,
+    id: user.id,
+  };
 
-    if(!user) return null;
-    const tokenData:IAuthData = {
-      email: user.email,
-      id: user.id
-    }
+  let print3 = await new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve("");
+    }, 3000);
+  });
+  const expires = new Date(accessTokenExpresDate);
+  const session = await encrypt({ user: tokenData, expires }, "ACCESS");
 
-    let print3 = await new Promise((resolve, reject) => {
-      setTimeout(() => {
-        resolve("")
-      }, 3000);
-    })
-    const expires = new Date(Date.now() + 60 * 100);
-    const session = await encrypt({ user: tokenData , expires }, "ACCESS");
+  cookies().set(auth_session_name, session, { expires, httpOnly: true });
 
-  
-    cookies().set(auth_session_name, session, { expires, httpOnly: true,})
-    
-    return session;
-
-
+  return session;
 }
 
 export async function logout() {
@@ -88,13 +88,19 @@ export async function updateSession(request: NextRequest) {
 }
 
 export async function createTokens(user: IAuthData) {
-  const accessTokenExpres = new Date(Date.now() + 60 * 100);
-  const refreshTokenExpres = new Date(Date.now() + 120 * 100);
-  const accessToken = await encrypt({ user, expires: accessTokenExpres }, "ACCESS");
-  const refreshToken = await encrypt({
-    user: user,
-    expires: refreshTokenExpres,
-  }, "REFRESH");
+  const accessTokenExpres = new Date(accessTokenExpresDate);
+  const refreshTokenExpres = new Date(refrreshTokenExpresDate);
+  const accessToken = await encrypt(
+    { user, expires: accessTokenExpres },
+    "ACCESS"
+  );
+  const refreshToken = await encrypt(
+    {
+      user: user,
+      expires: refreshTokenExpres,
+    },
+    "REFRESH"
+  );
 
   return {
     accessToken,
@@ -103,26 +109,59 @@ export async function createTokens(user: IAuthData) {
 }
 
 export async function updateAccessToken(data: IAuthData) {
-  const accessTokenExpres = new Date(Date.now() + 60 * 100);
-  const accessToken = await encrypt({ user: data, expires: accessTokenExpres }, "ACCESS");
-  return accessToken
+  const accessTokenExpres = new Date(accessTokenExpresDate);
+  const accessToken = await encrypt(
+    { user: data, expires: accessTokenExpres },
+    "ACCESS"
+  );
+  return accessToken;
 }
 
-export async function getUserRole(userId:string | undefined)
-{
-  if(!userId) return null
+export async function getUserRole(userId: string | undefined) {
+  if (!userId) return null;
   try {
     let user = await prismaInstance.user.findFirstOrThrow({
       where: {
-        id: userId
-      }
-    })
-    
-    return user.role
+        id: userId,
+      },
+    });
+
+    return user.role;
   } catch (error) {
-    console.error("User ", error)
-    return null
+    console.error("User ", error);
+    return null;
   }
+}
+
+export async function changePassword(userId: string, old_password:string, newPassword: string) {
+  try {
+    await prismaInstance.user.update({
+      where: {
+        id: userId,
+        password: hashPassword(old_password)
+      },
+      data: {
+        password: hashPassword(newPassword),
+      },
+    });
+  } catch (error) {
+    console.log("Error Change Password ", error);
+  }
+}
+
+export async function activateAccount(token:string):Promise<boolean> {
+  let isValid = false;
+  try {
+    const { payload } = await jwtVerify(token, key, {
+      algorithms: [alogorith],
+    });
+    isValid = true
+  } catch (error) {
+    console.error(error)
+    isValid = false
+  }
+
+  return isValid
 }
 
 interface IAuthData {
