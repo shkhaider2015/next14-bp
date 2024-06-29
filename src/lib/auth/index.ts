@@ -37,6 +37,7 @@ export async function login(userData: { email: string; password: string }) {
     where: {
       email: userData.email,
       password: hashPassword(userData.password),
+      is_active: true
     },
   });
 
@@ -133,12 +134,16 @@ export async function getUserRole(userId: string | undefined) {
   }
 }
 
-export async function changePassword(userId: string, old_password:string, newPassword: string) {
+export async function changePassword(
+  email: string,
+  old_password: string,
+  newPassword: string
+) {
   try {
     await prismaInstance.user.update({
       where: {
-        id: userId,
-        password: hashPassword(old_password)
+        email: email,
+        password: hashPassword(old_password),
       },
       data: {
         password: hashPassword(newPassword),
@@ -149,19 +154,53 @@ export async function changePassword(userId: string, old_password:string, newPas
   }
 }
 
-export async function activateAccount(token:string):Promise<boolean> {
+export async function validateToken(
+  token: string
+): Promise<{ isValid: boolean; email: string }> {
   let isValid = false;
+  let email = "";
   try {
     const { payload } = await jwtVerify(token, key, {
       algorithms: [alogorith],
     });
-    isValid = true
+    isValid = true;
+    email = payload.email as string;
   } catch (error) {
-    console.error(error)
-    isValid = false
+    console.error(error);
+    isValid = false;
+    email = "";
   }
 
-  return isValid
+  return { isValid, email };
+}
+
+export async function activateAccount(
+  token: string
+): Promise<{ isValid: boolean; email: string }> {
+  let isValid = false;
+  let email = "";
+  try {
+    const { payload } = await jwtVerify(token, key, {
+      algorithms: [alogorith],
+    });
+    isValid = true;
+    email = payload.email as string;
+
+    await prismaInstance.user.update({
+      where: {
+        email,
+      },
+      data: {
+        is_active: true,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    isValid = false;
+    email = "";
+  }
+
+  return { isValid, email };
 }
 
 interface IAuthData {

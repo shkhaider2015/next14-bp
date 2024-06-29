@@ -7,6 +7,7 @@ import { writeFile } from "fs/promises";
 import path from "path";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
 import { Role } from "@/types/user.types";
+import { sendActivationCode } from "@/lib/auth/specific";
 
 export const config = {
   api: {
@@ -85,28 +86,50 @@ export async function POST(request: NextRequest) {
       "Password must contain at least one lowercase, uppercase, number and symbol"
     );
   if (password && password.length > 20) errors.push("Password is too long");
-  if (!_.isEqual(password, confirmPassword))
+  if (password !== confirmPassword)
     errors.push("Confirm password is not matched");
+  if (_.isEmpty(role)) role = Role.USER;
 
-  if(role != Role.ADMIN && role != Role.PREMIUM && role != Role.USER) {
-    errors.push("The given role is not allowed")
+  if (role != Role.ADMIN && role != Role.PREMIUM && role != Role.USER) {
+    errors.push("The given role is not allowed");
   }
 
   if (!_.isEmpty(errors)) {
-    return NextResponse.json({ data: null, message: errors });
+    return NextResponse.json({ data: null, message: errors }, { status: 400 });
   }
 
   try {
+    const isUserExist = await prismaInstance.user.findFirst({
+      where: {
+        email,
+      },
+    });
+    if (isUserExist) {
+      return NextResponse.json(
+        {
+          message: "User already exist, Please login",
+          data: null,
+        },
+        { status: 400 }
+      );
+    }
     const user = await prismaInstance.user.create({
       data: { email, password: hashPassword(password), fullName, role },
     });
-    return NextResponse.json(
-      {
-        message: "User created successfully",
-        data: user,
-      },
-      { status: 200 }
-    );
+
+    try {
+      await sendActivationCode(email);
+    } catch (error) {
+      console.log("Activation link error ", error);
+    } finally {
+      return NextResponse.json(
+        {
+          message: "Activation link has been sent to your email",
+          data: null,
+        },
+        { status: 200 }
+      );
+    }
   } catch (error) {
     if (error instanceof PrismaClientKnownRequestError) {
       if (error.code == "P2002") {
@@ -144,7 +167,7 @@ export async function PATCH(request: NextRequest) {
   let id = data?.get("id")?.toString() || "";
   let fullName = data?.get("fullName")?.toString() || "";
   let gender = data?.get("gender")?.toString() || "NOT_SPECIFIED";
-  let uploaded_image:any = data?.get("profile_image");
+  let uploaded_image: any = data?.get("profile_image");
   let age = data?.get("age")?.toString() || "";
 
   try {
@@ -158,13 +181,14 @@ export async function PATCH(request: NextRequest) {
         buffer
       );
 
-      profile_image = 'uploads/' + filename
+      profile_image = "uploads/" + filename;
     }
 
     let info_toBeUpdate: any = {};
     if (!_.isEmpty(fullName)) info_toBeUpdate.fullName = fullName;
     if (!_.isEmpty(gender)) info_toBeUpdate.gender = gender;
-    if(!_.isEmpty(profile_image)) info_toBeUpdate.profile_image = profile_image;
+    if (!_.isEmpty(profile_image))
+      info_toBeUpdate.profile_image = profile_image;
     if (!_.isEmpty(age)) info_toBeUpdate.age = age;
 
     if (_.isEmpty(id)) throw "User id is required";

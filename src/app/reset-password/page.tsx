@@ -1,9 +1,11 @@
 "use client";
 import { useState } from "react";
 import styles from "./reset-password.module.css";
+import _ from "lodash";
 
 export default function ResetPassword() {
   const [isEmailSent, setIsEmailSent] = useState(false);
+  const [error, setError] = useState<string|undefined>(undefined);
 
 
   return (
@@ -26,6 +28,9 @@ export default function ResetPassword() {
 
           if(response.ok) {
             setIsEmailSent(true)
+          } else {
+            let error = await response.json()
+            setError(error?.message)
           }
         }}
       >
@@ -35,6 +40,9 @@ export default function ResetPassword() {
         <button type="submit">Send</button>
         {
           isEmailSent && <h4>Email has been sent successfully please check your inbox</h4>
+        }
+        {
+          !_.isEmpty(error) && <h6>{error}</h6>
         }
       </form>
     </main>

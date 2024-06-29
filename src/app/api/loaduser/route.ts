@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+    if(!user.is_active) throw({message: 'User is not activated'})
     if(user.token.length > 0 && user.token.every(item => !item.blackListed)) throw('Token is black listed')
     let updatedUser = exclude(user, ["password"]);
 

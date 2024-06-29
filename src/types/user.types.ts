@@ -26,6 +26,6 @@ export interface IProfile extends IUser {
 export type TGENDER = "MALE" | "FEMALE" | "NOT_SPECIED";
 export enum Role {
     USER = "USER",  
-    PREMIUM = "PREMUIM",
+    PREMIUM = "PREMIUM",
     ADMIN = "ADMIN",  
 }

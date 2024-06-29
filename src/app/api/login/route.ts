@@ -40,6 +40,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    if(!user.is_active) {
+      return NextResponse.json(
+        {
+          message: "Your account is not active",
+        },
+        { status: 400 }
+      );
+    }
     // If login again from same device black list previous token
     await prismaInstance.token.updateMany({
       where: {

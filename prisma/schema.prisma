@@ -22,6 +22,7 @@ model User {
   fullName      String?
   gender        String?
   profile_image String?
+  is_active     Boolean  @default(false)
   age           Int?
   role          Role     @default(USER)
   token         Token[]
